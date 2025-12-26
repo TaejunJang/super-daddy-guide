@@ -31,10 +31,10 @@ ext {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.ai:spring-ai-advisors-vector-store'
     implementation 'org.springframework.ai:spring-ai-pdf-document-reader'
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
-    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai-embedding'
     implementation 'org.springframework.ai:spring-ai-starter-vector-store-qdrant'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
