@@ -6,42 +6,38 @@
     <title>Super Daddy - 육아 도우미</title>
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="chat-container">
         <header class="chat-header">
-            <div class="header-left">
-                <i class="fas fa-arrow-left"></i>
-            </div>
             <div class="header-center">
                 <span>Super Daddy</span>
             </div>
             <div class="header-right">
-                <i class="fas fa-search"></i>
+                <i class="fas fa-search" id="search-btn"></i>
                 <i class="fas fa-bars"></i>
             </div>
         </header>
 
-        <main class="chat-screen" id="chat-screen">
-            <div class="chat-date">2025년 12월 26일 금요일</div>
-            
-            <div class="message-row received">
-                <img src="https://via.placeholder.com/50" alt="SuperDaddy">
-                <div class="message-content">
-                    <span class="message-author">Super Daddy</span>
-                    <div class="message-bubble">
-                        안녕하세요! 초보 아빠를 위한 슈퍼 대디입니다. 무엇이든 물어보세요!
-                    </div>
-                    <span class="message-time">10:00</span>
-                </div>
+        <!-- Search Bar -->
+        <div id="search-bar" class="search-bar hidden">
+            <input type="text" id="search-input" placeholder="대화 내용 검색...">
+            <div class="search-controls">
+                <span id="search-count">0/0</span>
+                <i class="fas fa-chevron-up" id="search-prev"></i>
+                <i class="fas fa-chevron-down" id="search-next"></i>
+                <i class="fas fa-times" id="search-close"></i>
             </div>
+        </div>
+
+        <main class="chat-screen" id="chat-screen">
         </main>
 
         <form class="chat-input-area" id="chat-form">
             <div class="input-wrapper">
-                <i class="fas fa-plus"></i>
                 <input type="text" id="message-input" placeholder="메시지를 입력하세요..." autocomplete="off">
-                <i class="far fa-smile"></i>
                 <button type="submit" class="send-btn"><i class="fas fa-arrow-up"></i></button>
             </div>
         </form>

@@ -73,6 +73,56 @@ body {
 }
 .header-left i, .header-right i { margin: 0 10px; cursor: pointer; }
 
+/* Search Bar */
+.search-bar {
+    background-color: #f0f0f0;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
+    z-index: 10;
+}
+
+.search-bar.hidden {
+    display: none;
+}
+
+.search-bar input {
+    flex: 1;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 5px 10px;
+    margin-right: 10px;
+}
+
+.search-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #555;
+}
+
+.search-controls i {
+    cursor: pointer;
+}
+
+#search-count {
+    font-size: 12px;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Highlights */
+.highlight {
+    background-color: yellow;
+    color: black;
+}
+
+.highlight.active {
+    background-color: orange;
+    font-weight: bold;
+}
+
 /* Screen */
 .chat-screen {
     flex: 1;
@@ -104,12 +154,46 @@ body {
 
 .message-bubble {
     background-color: white;
-    padding: 10px 13px;
+    padding: 12px 16px;
     border-radius: 15px;
     font-size: 14px;
-    max-width: 250px;
-    line-height: 1.4;
-    word-break: break-all; /* Handles long words */
+    max-width: 280px;
+    line-height: 1.6;
+    /* white-space: pre-wrap; Removed to let Markdown handle blocking */
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Markdown Styles inside Bubble */
+.message-bubble p {
+    margin-bottom: 8px;
+}
+.message-bubble p:last-child {
+    margin-bottom: 0;
+}
+.message-bubble ul, .message-bubble ol {
+    margin-left: 20px;
+    margin-bottom: 8px;
+}
+.message-bubble li {
+    margin-bottom: 4px;
+}
+.message-bubble strong {
+    font-weight: 700;
+}
+.message-bubble pre {
+    background-color: #f4f4f4;
+    padding: 8px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin-bottom: 8px;
+    font-family: monospace;
+}
+.message-bubble code {
+    background-color: #f4f4f4;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
 }
 
 .message-time {
