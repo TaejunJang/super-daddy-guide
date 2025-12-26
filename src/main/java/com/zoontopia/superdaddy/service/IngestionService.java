@@ -11,11 +11,9 @@ import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.util.List;
 
 @Service
@@ -25,7 +23,7 @@ public class IngestionService implements CommandLineRunner {
 
     private final VectorStore vectorStore;
 
-    @Value("file:parentingGuild.pdf")
+    @Value("classpath:parenting_guide.pdf")
     private Resource pdfResource;
 
     public IngestionService(VectorStore vectorStore) {
@@ -35,7 +33,7 @@ public class IngestionService implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        String fileName = pdfResource.getFilename(); // "parentingGuild.pdf"
+        String fileName = pdfResource.getFilename(); // "parenting_guide.pdf"
 
         // 1. 메타데이터 필터 생성: "source" 필드가 파일명과 일치하는지 확인
         FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
