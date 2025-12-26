@@ -2,9 +2,13 @@ package com.zoontopia.superdaddy.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.filter.Filter;
+import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.FileSystemResource;
@@ -12,6 +16,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.util.List;
 
 @Service
 public class IngestionService implements CommandLineRunner {
@@ -29,9 +34,20 @@ public class IngestionService implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Check if the vector store already contains data to avoid duplicate ingestion
-        // We assume that if we find at least one document, the store is populated.
-        var searchRequest = org.springframework.ai.vectorstore.SearchRequest.builder().query("parenting").topK(1).build();
+
+        String fileName = pdfResource.getFilename(); // "parentingGuild.pdf"
+
+        // 1. 메타데이터 필터 생성: "source" 필드가 파일명과 일치하는지 확인
+        FilterExpressionBuilder filterExpressionBuilder = new FilterExpressionBuilder();
+        Filter.Expression filter = filterExpressionBuilder.eq("source", fileName).build();
+
+        // 2. 해당 필터를 적용해 검색 (데이터 존재 여부 확인)
+        var searchRequest = SearchRequest.builder()
+                .query("any") // 필터가 중요하므로 검색어는 무관
+                .filterExpression(filter)
+                .topK(1)
+                .build();
+
         var existingDocs = vectorStore.similaritySearch(searchRequest);
         
         if (!existingDocs.isEmpty()) {
@@ -45,20 +61,33 @@ public class IngestionService implements CommandLineRunner {
         }
 
         try {
-            logger.info("Loading parentingGuild.pdf into Vector Store...");
+            logger.info("파일 '{}' 로딩 시작...", fileName);
             PagePdfDocumentReader pdfReader = new PagePdfDocumentReader(pdfResource);
-            
-            // Configure TokenTextSplitter to respect API token limits.
-            // text-embedding-004 has a limit of 2048 tokens. 
-            // We use 1000 to be safe and allow for metadata/overhead.
             var tokenTextSplitter = new TokenTextSplitter(1000, 400, 200, 100, true);
-            
+
+            // 3. 텍스트를 쪼개고 각 조각(Document)에 파일명 메타데이터 추가
             var documents = tokenTextSplitter.apply(pdfReader.get());
-            
-            vectorStore.accept(documents);
-            logger.info("Successfully loaded {} documents into Vector Store.", documents.size());
+            documents.forEach(doc -> {
+                doc.getMetadata().put("source", fileName); // 메타데이터 태깅
+            });
+
+            // 4. 안전한 배치 로딩 (이전 답변의 Rate Limit 대응 로직 적용)
+            processBatchWithDelay(documents);
+
+            logger.info("파일 '{}'의 문서 {}개 로드 완료.", fileName, documents.size());
         } catch (Exception e) {
             logger.error("Error loading PDF: {}", e.getMessage());
+        }
+    }
+
+    private void processBatchWithDelay(List<Document> allDocs) throws InterruptedException {
+        int batchSize = 5;
+        long delayMillis = 10000;
+
+        for (int i = 0; i < allDocs.size(); i += batchSize) {
+            int end = Math.min(i + batchSize, allDocs.size());
+            vectorStore.accept(allDocs.subList(i, end));
+            if (end < allDocs.size()) Thread.sleep(delayMillis);
         }
     }
 }
