@@ -7,10 +7,10 @@ Super Daddy는 초보 아빠들이 육아 중에 겪는 다양한 궁금증을 �
 ## 🛠 기술 스펙 (Tech Stack)
 
 ### Backend
-- **Language:** Java 17
-- **Framework:** Spring Boot 3.x
-- **AI Integration:** Spring AI (Google Gemini)
-- **Build Tool:** Gradle
+- **Language:** Java 25
+- **Framework:** Spring Boot 3.5.10-SNAPSHOT
+- **AI Integration:** Spring AI 1.1.2 (Google Gemini)
+- **Build Tool:** Gradle 9.2.1
 
 ### Frontend
 - **Template Engine:** Thymeleaf
