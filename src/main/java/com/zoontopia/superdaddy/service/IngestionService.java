@@ -59,15 +59,27 @@ public class IngestionService implements CommandLineRunner {
         }
 
         try {
-            logger.info("파일 '{}' 로딩 시작...", fileName);
+            logger.info("파일 '{}' 로딩 시작 (Chunk Size: 800)...", fileName);
             PagePdfDocumentReader pdfReader = new PagePdfDocumentReader(pdfResource);
-            var tokenTextSplitter = new TokenTextSplitter(1000, 400, 200, 100, true);
+            // Chunk Size를 1000 -> 1500으로 증가시켜 문맥 범위 확대
+            var tokenTextSplitter = new TokenTextSplitter(800, 200, 5, 100, true);
 
             // 3. 텍스트를 쪼개고 각 조각(Document)에 파일명 메타데이터 추가
-            var documents = tokenTextSplitter.apply(pdfReader.get());
-            documents.forEach(doc -> {
-                doc.getMetadata().put("source", fileName); // 메타데이터 태깅
-            });
+            var rawDocuments = pdfReader.get();
+            List<Document> cleanedDocuments = rawDocuments.stream()
+                    .map(doc -> {
+                        String cleaned = doc.getText().replaceAll("\\s+", " ").trim();
+                        return new Document(cleaned, doc.getMetadata());
+                    })
+                    .toList();
+
+
+            var documents = tokenTextSplitter.apply(cleanedDocuments);
+            for (int i = 0; i < documents.size(); i++) {
+                Document doc = documents.get(i);
+                doc.getMetadata().put("source", fileName);
+                doc.getMetadata().put("chunk_index", i); // 순서 정보 추가
+            }
 
             // 4. 안전한 배치 로딩 (이전 답변의 Rate Limit 대응 로직 적용)
             processBatchWithDelay(documents);
