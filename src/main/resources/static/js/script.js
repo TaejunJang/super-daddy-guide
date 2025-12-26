@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const chatScreen = document.getElementById('chat-screen');
+    const loadingOverlay = document.getElementById('loading-overlay');
 
     function getCurrentTime() {
         const now = new Date();
@@ -57,9 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage(message, 'sent');
         messageInput.value = '';
 
-        // 2. Show Loading (Optional, simpler to just wait for now or add a temporary bubble)
-        // const loadingId = 'loading-' + Date.now();
-        // addMessage('...', 'received'); 
+        // Show Loading
+        loadingOverlay.classList.remove('hidden');
 
         try {
             const response = await fetch('/api/chat', {
@@ -79,6 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error:', error);
             addMessage("서버 연결에 실패했습니다.", 'received');
+        } finally {
+            // Hide Loading
+            loadingOverlay.classList.add('hidden');
         }
     });
 });

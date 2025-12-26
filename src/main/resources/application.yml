@@ -1,3 +1,4 @@
+
 spring:
   application:
     name: super-daddy
@@ -23,3 +24,5 @@ spring:
 logging:
   level:
     org.springframework.ai: INFO
+server:
+  port: 35000
