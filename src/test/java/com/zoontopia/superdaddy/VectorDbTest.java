@@ -20,14 +20,14 @@ public class VectorDbTest {
     @Test
     public void testSimilaritySearch() {
         // Given
-        String query = "트름 시키는 법 어깨 위에 안고 트림시키기 아기의 머리가"; // Test query related to parenting guide
+        String query = "산모가 출산 후에 느끼는 우울감과 감정 기복"; // Test query related to parenting guide
 
         // When
         List<Document> results = vectorStore.similaritySearch(
                 SearchRequest.builder()
                         .query(query)
-                        .topK(7)
-                        .similarityThreshold(0.6) // Slightly lower threshold for testing
+                        .topK(20)
+                        .similarityThreshold(0.7) // Slightly lower threshold for testing
                         .build()
         );
 

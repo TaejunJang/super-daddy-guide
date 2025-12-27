@@ -28,7 +28,7 @@ public class ChatService {
     private final VectorStore vectorStore;
 
     // 유사도 점수 임계값 설정 (0.0 ~ 1.0 사이, 높을수록 엄격함)
-    private static final double SIMILARITY_THRESHOLD = 0.6;
+    private static final double SIMILARITY_THRESHOLD = 0.7;
 
     public ChatService(ChatClient.Builder chatClientBuilder, VectorStore vectorStore) {
         this.chatClient = chatClientBuilder.build();
