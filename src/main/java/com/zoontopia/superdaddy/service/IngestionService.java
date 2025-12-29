@@ -108,48 +108,78 @@ public class IngestionService implements CommandLineRunner {
 
             logger.info("Refining batch {}-{} / {}", i + 1, end, totalDocs);
 
-            // 배치 단위 전처리 요청
-            List<String> refinedTexts = refineBatchText(batchTexts);
+            // 1. 수정된 refineBatchText 호출 (List<RefinedResult> 반환)
+            List<RefinedResult> refinedResults = refineBatchText(batchTexts);
 
-            // 결과 매핑
+            // 2. 결과 매핑
             for (int j = 0; j < batchDocs.size(); j++) {
-                String text = (j < refinedTexts.size()) ? refinedTexts.get(j) : batchDocs.get(j).getText();
-                // 안전 장치: 빈 텍스트나 null 처리
-                if (text == null || text.isBlank()) {
-                    text = batchDocs.get(j).getText().replaceAll("\\s+", " ").trim();
+                Document originalDoc = batchDocs.get(j);
+                RefinedResult result = (j < refinedResults.size()) ? refinedResults.get(j) : null;
+
+                String text;
+                var metadata = originalDoc.getMetadata(); // 기존 page_number 등 유지
+
+                if (result != null && result.refined_text() != null && !result.refined_text().isBlank()) {
+                    // 성공 케이스: 정제된 텍스트와 메타데이터 주입
+                    text = result.refined_text();
+                    metadata.put("section_title", result.section_title());
+                    metadata.put("keywords", result.keywords()); // List<String> 형태로 저장
+                } else {
+                    // 실패 케이스 (Fallback): 원본 텍스트 공백 제거 후 기본값 설정
+                    logger.warn("Batch result mapping failed for index {}. Using fallback.", j);
+                    text = originalDoc.getText().replaceAll("\\s+", " ").trim();
+                    metadata.put("section_title", "");
+                    metadata.put("keywords", List.of());
                 }
-                cleanedDocuments.add(new Document(text, batchDocs.get(j).getMetadata()));
+
+                cleanedDocuments.add(new Document(text, metadata));
             }
 
-            // Rate Limit 준수 (1초 대기)
+            // Rate Limit 준수 (Gemini API 안정성을 위해 배치 간 휴식)
             Thread.sleep(1000);
         }
         return cleanedDocuments;
     }
 
-    private List<String> refineBatchText(List<String> originalTexts) {
+    private List<RefinedResult> refineBatchText(List<String> originalTexts) {
         String systemPrompt = """
-                                당신은 RAG(Retrieval-Augmented Generation) 시스템의 검색 품질을 높이기 위한 데이터 정제 및 레이아웃 복구 전문가입니다.
-                                입력되는 JSON 배열의 각 요소는 2단 구성(좌우 분할) PDF에서 추출되어 문장 순서가 가로 방향으로 섞여 있는 상태입니다.
-                            
-                                [핵심 작업 지시]
-                                1. **레이아웃 복구**: 가로로 읽혀서 섞여버린 왼쪽 단과 오른쪽 단의 문장들을 문맥에 맞게 원래의 순서대로 다시 재배치하세요.
-                                2. **문장 완성**: '...집니다', '...심해' 처럼 줄바꿈으로 인해 잘린 단어들을 앞뒤 문맥을 고려하여 자연스럽게 연결하세요.
-                                3. **텍스트 정제**: 불필요한 특수기호, 깨진 글자, 중복 공백을 제거하고 가독성 좋은 문단 구조로 정리하세요.
-                                4. **데이터 보존**: 원문의 의미를 절대 요약, 생략, 수정하지 마세요. 모든 정보는 그대로 유지해야 합니다.
-                                
-                                [출력 규칙 - 절대 준수]
-                                1. **구조 유지**: 반드시 입력 배열과 **동일한 순서, 동일한 크기(길이)**의 JSON 문자열 배열 형식을 유지해야 합니다.
-                                2. **형식 제한**: Markdown 코드 블록(```json 등)을 절대 사용하지 마세요. 오직 순수한 JSON 배열(`["텍스트1", "텍스트2"]`)만 출력하세요.
-                                3. **내용**: 설명이나 인사 없이 결과 데이터만 반환하세요.
-                            
-                                예시 입력: ["산전우울증 산후우울증 무슨 일이든 처음 겪는다면 크고 작은 스트레스를 유발합니다. 사람은 누구나 우울감을 느끼고, 산모도 예외는 아닙니다. 실 특히 여성에게 임신, 게다가 첫 임신이라면 엄청난 스트레스를 제로 많은 산모가 아기가 태어난 후에 이전보다 감정 기복이 동반합니다."]
-                                예시 출력: ["산전우울증 및 산후우울증은 처음 겪는 일이라면 누구나 크고 작은 스트레스를 유발합니다. 특히 여성에게 첫 임신은 엄청난 스트레스를 동반하며, 실제로 많은 산모가 아기가 태어난 후에 이전보다 감정 기복이 심해진다고 호소합니다."]
-                                """;
+                당신은 RAG(Retrieval-Augmented Generation) 시스템의 고성능 검색 품질을 보장하는 데이터 가공 전문가입니다.\s
+                제공된 텍스트는 PDF에서 추출되어 레이아웃이 깨지거나 공백이 많습니다. 이를 검색 엔진이 가장 선호하는 형태로 재구성하세요.
+                
+                [핵심 작업 지시]
+                1. 텍스트 정제 (refined_text):
+                   - PDF 2단 구성으로 인해 가로로 섞인 문장들을 문맥에 맞게 완벽히 복구하세요.
+                   - 단어 사이의 불필요한 다중 공백과 의미 없는 줄바꿈(\\n)을 모두 제거하고 한 줄의 자연스러운 문단으로 만드세요.
+                   - '...했습 니다'와 같이 잘린 단어들을 결합하세요.
+                
+                2. 섹션 제목 추출 (section_title):
+                   - '기본 섹션', '내용 요약' 같은 모호한 표현은 절대 금지합니다.
+                   - 해당 페이지를 읽지 않아도 내용을 알 수 있도록 매우 구체적인 제목을 뽑으세요. (예: "6개월 아기 이유식 시작 시기 및 주의사항")
+                   - 만약 명확한 제목이 없다면, 텍스트의 첫 번째 핵심 문장을 요약하여 제목으로 만드세요.
+                
+                3. 검색 키워드 추출 (keywords):
+                   - 사용자가 이 내용을 찾기 위해 검색창에 입력할 법한 '질문형 키워드'와 '핵심 명사'를 섞어서 5개 추출하세요.
+                   - 예: ["아기 걸음마 시기", "걸음마 훈련법", "아기 엉덩방아", "돌아기 발달", "걸음마 보조기"]
+                
+                [데이터 보존 원칙]
+                - 원문의 수치(g, ml, 개월 수), 고유 명사, 전문 용어는 절대로 생략하거나 수정하지 말고 그대로 유지하세요.
+                
+                [출력 규칙 - 필독]
+                - 오직 순수한 JSON 배열 형식으로만 응답하세요. (Markdown 블록 ```json 사용 금지)
+                - 입력된 배열의 개수와 출력되는 배열의 개수가 반드시 일치해야 합니다.
+                
+                [응답 포맷]
+                [
+                  {
+                    "refined_text": "정제된 문장",
+                    "section_title": "구체적인 제목",
+                    "keywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"]
+                  }
+                ]
+        """;
 
         try {
             String jsonInput = objectMapper.writeValueAsString(originalTexts);
-
             String response = chatClient.prompt()
                     .system(systemPrompt)
                     .user(jsonInput)
@@ -157,33 +187,55 @@ public class IngestionService implements CommandLineRunner {
                     .content();
 
             String cleanJson = response.replaceAll("```json", "").replaceAll("```", "").trim();
-            return objectMapper.readValue(cleanJson, new TypeReference<List<String>>() {});
-
+            // List<RefinedResult> 형태로 파싱
+            return objectMapper.readValue(cleanJson, new TypeReference<List<RefinedResult>>() {});
         } catch (Exception e) {
-            logger.warn("Gemini batch refinement failed. Falling back to simple cleanup. Error: {}", e.getMessage());
-            return originalTexts.stream()
-                    .map(s -> s.replaceAll("\\s+", " ").trim())
-                    .toList();
+            logger.info("Gemini refinement failed: "+e.getMessage());
+            logger.error("Gemini refinement failed", e);
+            return originalTexts.stream().map(t -> new RefinedResult(t, "알 수 없는 섹션", List.of())).toList();
         }
     }
 
     private List<Document> splitAndEnrichDocuments(List<Document> cleanedDocuments, String fileName) {
-        logger.info("Splitting documents and adding metadata...");
-        var tokenTextSplitter = new TokenTextSplitter(400, 100, 10, 5000, true);
-        var documents = tokenTextSplitter.apply(cleanedDocuments);
+        logger.info("Splitting and Optimizing for text-embedding-004...");
+        // 청크 크기를 약간 키워 문맥 유지력을 높임 (Overlap은 유지)
+        var tokenTextSplitter = new TokenTextSplitter(500, 150, 10, 5000, true);
+        List<Document> processed = new ArrayList<>();
 
-        for (int i = 0; i < documents.size(); i++) {
-            Document doc = documents.get(i);
-            doc.getMetadata().put("source", fileName);
-            doc.getMetadata().put("chunk_index", i);
+        for (Document doc : cleanedDocuments) {
+            String sectionTitle = (String) doc.getMetadata().getOrDefault("section_title", "");
+            List<String> keywordList = (List<String>) doc.getMetadata().getOrDefault("keywords", List.of());
+            String keywordStr = String.join(", ", keywordList);
+
+            List<Document> chunks = tokenTextSplitter.split(doc);
+
+            for (int i = 0; i < chunks.size(); i++) {
+                Document chunk = chunks.get(i);
+
+                // [개선 포인트 1] 불필요한 라벨("[주제:]", "[키워드:]") 제거
+                // 임베딩 모델이 본연의 의미에 집중할 수 있도록 자연어 형태로 구성합니다.
+                String optimizedText = String.format("""
+                %s
+                핵심 키워드: %s
+                본문: %s
+                """, sectionTitle, keywordStr, chunk.getText()).trim();
+
+                // [개선 포인트 2] 메타데이터는 검색 필터링용으로 별도 저장 (벡터 연산에는 포함 안 됨)
+                chunk.getMetadata().put("source", fileName);
+                chunk.getMetadata().put("section_title", sectionTitle);
+                chunk.getMetadata().put("keywords", keywordList); // 필터링을 위해 리스트 형태로 유지
+                chunk.getMetadata().put("chunk_index", i);
+
+                processed.add(new Document(optimizedText, chunk.getMetadata()));
+            }
         }
-        return documents;
+        return processed;
     }
 
     private void ingestToVectorStore(List<Document> documents) throws InterruptedException {
         logger.info("Ingesting {} documents into Vector Store...", documents.size());
         int batchSize = 5;
-        long delayMillis = 10000;
+        long delayMillis = 5000;
 
         for (int i = 0; i < documents.size(); i += batchSize) {
             int end = Math.min(i + batchSize, documents.size());
@@ -194,4 +246,10 @@ public class IngestionService implements CommandLineRunner {
             }
         }
     }
+
+    public record RefinedResult(
+            String refined_text,
+            String section_title,
+            List<String> keywords
+    ) {}
 }
