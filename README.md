@@ -22,6 +22,7 @@ Super Daddy는 초보 아빠들이 육아 중에 겪는 다양한 궁금증을 �
 
 ### Infrastructure & Tools
 - **Container:** Docker (Docker Compose 지원)
+- **Vector Store:** Qdrant
 - **VCS:** Git
 
 ---
@@ -71,28 +72,47 @@ super-daddy/
 │   │
 │   └── test/                    # JUnit 테스트 코드
 ├── build.gradle                 # 의존성 및 빌드 설정
-├── docker-compose.yml           # 도커 실행 설정
+├── docker-compose.yml           # Qdrant 실행 설정
 └── README.md                    # 프로젝트 문서
 ```
 
 ## 🚀 실행 방법 (Getting Started)
 
 ### 사전 요구 사항
-- Java 17 이상 설치
-- Google Gemini API Key 발급
+- Java 25 이상 설치
+- Docker Desktop 설치 (Qdrant 실행용)
+- Google Cloud Project ID 및 Gemini API Key 발급
 
-### 1. 설정 (Configuration)
-`src/main/resources/application.yml` 파일에 API 키를 설정합니다.
+### 1. Vector Store 실행
+Qdrant 벡터 DB를 실행합니다.
+```bash
+docker-compose up -d
+```
+
+### 2. 설정 (Configuration)
+`src/main/resources/application.yml` 파일 또는 환경 변수를 통해 API 키와 설정을 등록합니다.
 *(보안을 위해 환경 변수 사용을 권장합니다)*
 
 ```yaml
 spring:
   ai:
-    gemini:
-      api-key: ${GEMINI_API_KEY}
+    google:
+      genai:
+        project-id: ${GOOGLE_PROJECT_ID}
+        api-key: ${GOOGLE_API_KEY}
+    vectorstore:
+      qdrant:
+        host: ${QDRANT_HOST} # 예: localhost
+        port: ${QDRANT_PORT} # 예: 6334
 ```
 
-### 2. 실행 (Run)
+**필수 환경 변수:**
+- `GOOGLE_PROJECT_ID`: Google Cloud 프로젝트 ID
+- `GOOGLE_API_KEY`: Google Gemini API Key
+- `QDRANT_HOST`: Qdrant 호스트 (로컬 실행 시 `localhost`)
+- `QDRANT_PORT`: Qdrant 포트 (기본값 `6334`)
+
+### 3. 실행 (Run)
 터미널에서 다음 명령어를 실행합니다.
 
 **Windows:**
@@ -104,11 +124,3 @@ spring:
 ```bash
 ./gradlew bootRun
 ```
-
-### 3. 접속
-브라우저를 열고 `http://localhost:35000` 으로 접속합니다.
-
----
-
-## 📝 라이선스
-This project is licensed under the MIT License.
