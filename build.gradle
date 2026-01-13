@@ -6,17 +6,10 @@ plugins {
 
 group = 'com.zoontopia'
 version = '0.0.1-SNAPSHOT'
-description = 'super-daddy'
 
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
-    }
-}
-
-configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
     }
 }
 
@@ -31,13 +24,24 @@ ext {
 }
 
 dependencies {
+    // 1. 스프링 부트 & 데이터베이스 (Neo4j)
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
-    implementation 'org.springframework.ai:spring-ai-advisors-vector-store'
-    implementation 'org.springframework.ai:spring-ai-pdf-document-reader'
-    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
-    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai-embedding'
-    implementation 'org.springframework.ai:spring-ai-starter-vector-store-qdrant'
+    implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
+
+    // 2. Spring AI (제거됨 - LangChain4j로 대체)
+
+    // 3. LangChain4j (GraphRAG 및 Neo4j 연동용)
+    // BOM을 사용하여 버전을 0.36.2로 고정합니다.
+    implementation platform('dev.langchain4j:langchain4j-bom:0.36.2')
+    implementation 'dev.langchain4j:langchain4j-spring-boot-starter'
+    implementation 'dev.langchain4j:langchain4j-neo4j'
+    implementation 'dev.langchain4j:langchain4j-google-ai-gemini'
+    implementation 'dev.langchain4j:langchain4j-document-parser-apache-tika'
+
+
+
+    // 4. 유틸리티 & 테스트
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -45,9 +49,7 @@ dependencies {
 }
 
 dependencyManagement {
-    imports {
-        mavenBom "org.springframework.ai:spring-ai-bom:${springAiVersion}"
-    }
+    
 }
 
 tasks.named('test') {

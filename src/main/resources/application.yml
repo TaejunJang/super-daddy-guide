@@ -4,34 +4,24 @@ spring:
     name: super-daddy
   config:
     import: "optional:file:.env[.properties]"
-  ai:
-    google:
-      genai:
-        project-id: ${GOOGLE_PROJECT_ID}
-        api-key: ${GOOGLE_API_KEY}
-        location: us-central1
-        chat:
-          options:
-            model: gemini-2.5-flash
-            temperature: 0.7
-        embedding:
-          text:
-            options:
-              model: text-embedding-004
-          project-id: ${GOOGLE_PROJECT_ID}
-          api-key: ${GOOGLE_API_KEY}
-          location: us-central1
-    vectorstore:
-      qdrant:
-        host: ${QDRANT_HOST}
-        port: ${QDRANT_PORT}
-        collection-name: parenting_guide
-        initialize-schema: true
+  neo4j:
+    uri: bolt://localhost:7687
+    authentication:
+      username: neo4j
+      password: 12341234
 
 
+langchain4j:
+  google-ai-gemini:
+    chat-model:
+      api-key: ${GOOGLE_API_KEY}
+      model-name: gemini-2.5-flash
+    embedding-model:
+      api-key: ${GOOGLE_API_KEY}
+      model-name: text-embedding-004
 
 logging:
   level:
-    org.springframework.ai: INFO
+    root: INFO
 server:
   port: 35000
